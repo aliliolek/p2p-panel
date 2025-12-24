@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+
+# Logs / temp
+*.log
+*.tmp
+
+# Frontend (Node)
+node_modules/
+dist/
+build/
+.cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Misc
+playground_results/
+template-ui/
+dummy_references/
+bybit_p2p/
