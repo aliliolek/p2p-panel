@@ -49,6 +49,11 @@ DEFAULT_TRADING_PREFS = {
 }
 
 
+def _stringify_trading_preferences(raw: Any) -> Dict[str, str]:
+    prefs = raw if isinstance(raw, dict) else {}
+    return {k: str(v) for k, v in (prefs or {}).items()}
+
+
 def _load_limits() -> Dict[str, List[Dict[str, str]]]:
     path = Path("playground_results/balance_limits.json")
     if not path.exists():
@@ -175,7 +180,7 @@ async def create_fiat_balance_ad(user_id: str, payload: CreateFiatBalanceAdReque
         minAmount=str(payload.minAmount),
         maxAmount=str(payload.maxAmount),
         remark=payload.remark,
-        tradingPreferenceSet=DEFAULT_TRADING_PREFS,
+        tradingPreferenceSet=_stringify_trading_preferences(DEFAULT_TRADING_PREFS),
         paymentIds=[PAYMENT_METHOD_ID],
         quantity=str(payload.quantity),
         paymentPeriod=str(payload.paymentPeriod or "15"),
@@ -306,7 +311,7 @@ async def create_fiat_balance_ads_batch(
                         minAmount=str(min_amount),
                         maxAmount=str(max_amount),
                         remark=marker,
-                        tradingPreferenceSet=DEFAULT_TRADING_PREFS,
+                        tradingPreferenceSet=_stringify_trading_preferences(DEFAULT_TRADING_PREFS),
                         paymentIds=[PAYMENT_METHOD_ID],
                         quantity=str(qty),
                         paymentPeriod=str(payload.paymentPeriod or "15"),

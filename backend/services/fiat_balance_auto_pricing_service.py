@@ -140,6 +140,11 @@ PRIORITY_NICKS = {
 RATE_LIMIT: Dict[str, deque] = {}
 
 
+def _stringify_trading_preferences(raw: Any) -> Dict[str, str]:
+    prefs = raw if isinstance(raw, dict) else {}
+    return {k: str(v) for k, v in (prefs or {}).items()}
+
+
 def _extract_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not isinstance(response, dict):
         return []
@@ -492,7 +497,7 @@ def _update_ad(client, ad: Dict[str, Any], qty: float, price_val: float) -> Opti
         "minAmount": str(min_amount),
         "maxAmount": str(max_amount),
         "remark": remark,
-        "tradingPreferenceSet": trading_pref,
+        "tradingPreferenceSet": _stringify_trading_preferences(trading_pref),
         "paymentIds": [FIAT_PAYMENT_ID],
         "actionType": action_type,
         "quantity": str(qty),

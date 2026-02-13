@@ -218,6 +218,11 @@ def _pick_ad_field(ad: Dict[str, Any], *keys: str, default: Any = "") -> Any:
     return default
 
 
+def _stringify_trading_preferences(raw: Any) -> Dict[str, str]:
+    prefs = raw if isinstance(raw, dict) else {}
+    return {k: str(v) for k, v in (prefs or {}).items()}
+
+
 def _build_update_payload(ad: Dict[str, Any], remark: str) -> Dict[str, Any]:
     return {
         "id": str(_pick_ad_field(ad, "id", "itemId", "ad_id", default="")),
@@ -227,7 +232,9 @@ def _build_update_payload(ad: Dict[str, Any], remark: str) -> Dict[str, Any]:
         "minAmount": str(_pick_ad_field(ad, "minAmount", "min_amount", default="")),
         "maxAmount": str(_pick_ad_field(ad, "maxAmount", "max_amount", default="")),
         "remark": remark,
-        "tradingPreferenceSet": _pick_ad_field(ad, "tradingPreferenceSet", default={}) or {},
+        "tradingPreferenceSet": _stringify_trading_preferences(
+            _pick_ad_field(ad, "tradingPreferenceSet", default={}) or {}
+        ),
         "paymentIds": _extract_payment_ids(ad),
         "actionType": "MODIFY",
         "quantity": str(_pick_ad_field(ad, "lastQuantity", default="")),
