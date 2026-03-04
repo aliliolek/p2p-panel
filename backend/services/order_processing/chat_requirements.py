@@ -69,7 +69,7 @@ def _collect_from_messages(
     phones: set[str] = set()
     echo_ibans: set[str] = set()
     echo_phones: set[str] = set()
-    replied = False
+    last_counterparty_ms: Optional[int] = None
     for item in items:
         account_id = str(item.get("accountId") or "")
         if not account_id or account_id == my_account_id:
@@ -81,8 +81,8 @@ def _collect_from_messages(
             continue
         msg_trimmed = msg.strip()
         msg_ms = _parse_ms(item.get("createDate"))
-        if since_ms and msg_ms and msg_ms > since_ms:
-            replied = True
+        if msg_ms:
+            last_counterparty_ms = max(last_counterparty_ms or msg_ms, msg_ms)
         iban = extract_iban(msg)
         if iban:
             ibans.add(iban)
@@ -93,6 +93,8 @@ def _collect_from_messages(
             phones.add(phone)
             if msg_trimmed != phone:
                 echo_phones.add(phone)
+    # контрагент "відповів" лише якщо його останнє повідомлення новіше за наш останній запит
+    replied = bool(last_counterparty_ms and since_ms and last_counterparty_ms > since_ms)
     return ibans, phones, echo_ibans, echo_phones, replied
 
 
