@@ -147,7 +147,7 @@ def send_chat_message(
     *,
     echo: bool = False,
     send: bool = True,
-    bot_prefix: bool = True,
+    bot_prefix: bool = False,
 ) -> None:
     outgoing = _with_bot_prefix(text) if bot_prefix else text
     if echo:

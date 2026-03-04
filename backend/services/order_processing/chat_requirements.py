@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from .messages import ASK_SEQUENCES
 from .messaging import message_text, send_chat_message
 from .payments import extract_iban, extract_pl_phone
 
@@ -95,20 +96,33 @@ def _collect_from_messages(
     return ibans, phones, echo_ibans, echo_phones, replied
 
 
+def _get_ask_message(key: str, lang: str, step: int) -> str:
+    seq = ASK_SEQUENCES.get(key, {})
+    steps = seq.get(lang) or seq.get("en") or []
+    if not steps:
+        return ""
+    # кроки 0,1,2 — унікальні; крок 3+ — завжди останній елемент
+    idx = min(step, len(steps) - 1)
+    return steps[idx]
+
+
 def _build_request_messages(
     lang: str,
     missing_bank: bool,
     missing_iban: bool,
     missing_phone: bool,
+    iban_step: int = 0,
+    phone_step: int = 0,
 ) -> List[str]:
-    suffix = message_text("ask_separate", lang)
     messages: List[str] = []
     if missing_iban:
-        messages.append(f"{message_text('ask_account', lang)}\n{suffix}")
+        msg = _get_ask_message("ask_account", lang, iban_step)
+        if msg:
+            messages.append(msg)
     if missing_phone:
-        messages.append(f"{message_text('ask_phone', lang)}\n{suffix}")
-    if missing_bank:
-        messages.append(f"{message_text('ask_bank', lang)}\n{suffix}")
+        msg = _get_ask_message("ask_phone", lang, phone_step)
+        if msg:
+            messages.append(msg)
     return messages
 
 
@@ -199,6 +213,21 @@ def process_chat_requirements(
     if complete:
         return updates
 
+    iban_step = int(state.get("iban_ask_step") or 0)
+    phone_step = int(state.get("phone_ask_step") or 0)
+    iban_max = ASK_SEQUENCES.get("ask_account", {}).get("max_repeats", 10)
+    phone_max = ASK_SEQUENCES.get("ask_phone", {}).get("max_repeats", 10)
+
+    # якщо обидва поля вже вичерпали ліміт — більше не спамимо
+    iban_exhausted = not missing_iban or iban_step >= iban_max
+    phone_exhausted = not missing_phone or phone_step >= phone_max
+    if missing_iban and missing_phone and iban_exhausted and phone_exhausted:
+        return updates
+    if missing_iban and not missing_phone and iban_exhausted:
+        return updates
+    if missing_phone and not missing_iban and phone_exhausted:
+        return updates
+
     allow_repeat = False
     if not last_request_at:
         allow_repeat = True
@@ -209,12 +238,20 @@ def process_chat_requirements(
             allow_repeat = datetime.now(timezone.utc) - last_request_at >= timedelta(minutes=5)
 
     if allow_repeat:
-        messages = _build_request_messages(lang, missing_bank, missing_iban, missing_phone)
+        messages = _build_request_messages(
+            lang, missing_bank, missing_iban, missing_phone,
+            iban_step=iban_step,
+            phone_step=phone_step,
+        )
         for msg in messages:
             send_chat_message(api, order_id, msg, credential_id, echo=echo, send=send_messages)
         updates["last_request_at"] = datetime.now(timezone.utc).isoformat()
         updates["last_request_type"] = "BUY"
         updates["last_request_text"] = " | ".join(messages)
         updates["payment_data_complete"] = False
+        if missing_iban and iban_step < iban_max:
+            updates["iban_ask_step"] = iban_step + 1
+        if missing_phone and phone_step < phone_max:
+            updates["phone_ask_step"] = phone_step + 1
 
     return updates

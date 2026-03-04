@@ -35,6 +35,10 @@ SNAPSHOT_PATH = Path("playground_results/auto_pricing_cycle.json")
 _snapshot_written = False
 BUY_FIXED_QTY = {"BTC": 0.25, "ETH": 16.0, "USDT": 49000.0, "USDC": 49000.0}
 
+# True  — ставати в рівень з конкурентом
+# False — обганяти конкурента на один крок (0.01)
+MATCH_COMPETITOR_PRICE = True
+
 
 def _normalize_side(value: Any) -> str:
     if value is None:
@@ -164,9 +168,9 @@ def _target_price(side: str, competitor: Optional[Dict[str, Any]], step: float, 
     if comp_price is None:
         return fallback
     if side == "SELL":
-        return comp_price - step
+        return comp_price if MATCH_COMPETITOR_PRICE else comp_price - step
     if side == "BUY":
-        return comp_price + step
+        return comp_price if MATCH_COMPETITOR_PRICE else comp_price + step
     return fallback
 
 
