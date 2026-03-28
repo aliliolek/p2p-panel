@@ -19,7 +19,7 @@ RESULTS_DIR = Path("playground_results")
 AUTO_RESULTS_DIR = RESULTS_DIR / "auto_ads"
 AUTO_MARKER = "@@@"
 AUTO_PAUSED_MARKER = "@*@"
-MARKET_PAGE_SIZE = "10000"
+MARKET_PAGE_SIZE = "1000"
 SPOT_TICKERS_URL = "https://api.bybit.com/v5/market/tickers"
 REST_COUNTRIES_URL = "https://restcountries.com/v3.1/all?fields=cca3,currencies"
 MIN_ACTIVITY_USD = 300.0
