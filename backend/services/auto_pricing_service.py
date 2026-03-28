@@ -220,7 +220,7 @@ def _should_skip_update(
     unchanged_price = price_old is not None and abs(price_new - price_old) < step * 0.1
     unchanged_qty = qty_old is not None and abs(qty_new - qty_old) < 1e-9
     if update_price and update_qty:
-        return unchanged_price and unchanged_qty
+        return unchanged_price
     if update_price:
         return unchanged_price
     if update_qty:
