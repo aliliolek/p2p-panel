@@ -272,7 +272,10 @@ def _apply_pricing() -> List[Dict[str, Any]]:
         creds = build_exchange_credentials(row)
         client = create_exchange_client(creds)
         balances = _load_fund_balances(client)
-        contexts = collect_auto_pricing_contexts(creds)
+        contexts = sorted(
+            collect_auto_pricing_contexts(creds),
+            key=lambda c: str(c.ad.get("id") or ""),
+        )
         spot_cache: Dict[Tuple[str, str], Tuple[Optional[float], Optional[float], Optional[str]]] = {}
         used_prices: Dict[Tuple[str, str, str], set] = {}
         snapshot_entries: List[Dict[str, Any]] = []
