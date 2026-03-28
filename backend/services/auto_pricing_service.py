@@ -10,7 +10,7 @@ from pathlib import Path
 import json
 
 from exchanges import create_exchange_client
-from services.ads_service import _build_update_payload
+from services.ads_service import _build_update_payload, _load_bybit_ads
 from services.credentials_service import build_exchange_credentials
 from repositories.credentials_repository import fetch_all_credentials
 from tools.auto_pricing import (
@@ -272,12 +272,24 @@ def _apply_pricing() -> List[Dict[str, Any]]:
         creds = build_exchange_credentials(row)
         client = create_exchange_client(creds)
         balances = _load_fund_balances(client)
+        all_ads = _load_bybit_ads(creds)
         contexts = sorted(
-            collect_auto_pricing_contexts(creds),
+            collect_auto_pricing_contexts(creds, all_ads=all_ads),
             key=lambda c: str(c.ad.get("id") or ""),
         )
         spot_cache: Dict[Tuple[str, str], Tuple[Optional[float], Optional[float], Optional[str]]] = {}
+        # Pre-populate used_prices with static (non-auto) ads so auto ads never
+        # get assigned the same price as an existing static ad (Bybit error 90043).
         used_prices: Dict[Tuple[str, str, str], set] = {}
+        for static_ad in all_ads:
+            if AUTO_MARKER in str(static_ad.get("remark") or ""):
+                continue
+            t = str(static_ad.get("tokenId") or "").upper()
+            f = str(static_ad.get("currencyId") or "").upper()
+            s = _normalize_side(static_ad.get("side"))
+            p = _to_float(static_ad.get("price"))
+            if t and f and s and p is not None:
+                used_prices.setdefault((t, f, s), set()).add(round(p, PRICE_PRECISION))
         snapshot_entries: List[Dict[str, Any]] = []
         for ctx in contexts:
             ad = ctx.ad
@@ -326,7 +338,7 @@ def _apply_pricing() -> List[Dict[str, Any]]:
                 continue
             price_for_update = round(target_price, precision) if update_price and target_price is not None else current_price
             if update_price and price_for_update is not None:
-                pair_key = (token.upper(), fiat.upper(), side)
+                pair_key = (fiat.upper(), side)
                 pair_used = used_prices.setdefault(pair_key, set())
                 offset = 0
                 candidate = price_for_update

@@ -575,10 +575,13 @@ def _save_per_ad_snapshots(contexts: List[AutoAdContext]) -> None:
             )
 
 
-def collect_auto_pricing_contexts(creds: Optional[ExchangeCredentials] = None) -> List[AutoAdContext]:
+def collect_auto_pricing_contexts(
+    creds: Optional[ExchangeCredentials] = None,
+    all_ads: Optional[List[Dict[str, Any]]] = None,
+) -> List[AutoAdContext]:
     creds = creds or _load_primary_credentials()
     api = create_exchange_client(creds)
-    my_ads = _load_bybit_ads(creds)
+    my_ads = all_ads if all_ads is not None else _load_bybit_ads(creds)
     auto_ads = [ad for ad in my_ads if _is_auto_enabled(ad)]
     market_data = _fetch_spot_market_data()
     contexts: List[AutoAdContext] = []
