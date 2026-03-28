@@ -19,7 +19,7 @@ RESULTS_DIR = Path("playground_results")
 AUTO_RESULTS_DIR = RESULTS_DIR / "auto_ads"
 AUTO_MARKER = "@@@"
 AUTO_PAUSED_MARKER = "@*@"
-MARKET_PAGE_SIZE = "1000"
+MARKET_PAGE_SIZE = 30
 SPOT_TICKERS_URL = "https://api.bybit.com/v5/market/tickers"
 REST_COUNTRIES_URL = "https://restcountries.com/v3.1/all?fields=cca3,currencies"
 MIN_ACTIVITY_USD = 300.0
@@ -342,14 +342,22 @@ def _requires_strict_payment_match(ad: Dict[str, Any]) -> bool:
 
 
 def _fetch_market_ads(api, ad: Dict[str, Any]) -> List[Dict[str, Any]]:
-    resp = api.get_online_ads(
-        tokenId=str(ad.get("tokenId")),
-        currencyId=str(ad.get("currencyId")),
-        side=str(ad.get("side")),
-        page="1",
-        size=MARKET_PAGE_SIZE,
-    )
-    return _extract_items(resp)
+    all_items: List[Dict[str, Any]] = []
+    page = 1
+    while True:
+        resp = api.get_online_ads(
+            tokenId=str(ad.get("tokenId")),
+            currencyId=str(ad.get("currencyId")),
+            side=str(ad.get("side")),
+            page=str(page),
+            size=str(MARKET_PAGE_SIZE),
+        )
+        items = _extract_items(resp)
+        all_items.extend(items)
+        if len(items) < MARKET_PAGE_SIZE:
+            break
+        page += 1
+    return all_items
 
 
 def _allowed_competitor_min(my_min: float) -> float:
