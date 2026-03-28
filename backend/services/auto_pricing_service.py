@@ -274,6 +274,7 @@ def _apply_pricing() -> List[Dict[str, Any]]:
         balances = _load_fund_balances(client)
         contexts = collect_auto_pricing_contexts(creds)
         spot_cache: Dict[Tuple[str, str], Tuple[Optional[float], Optional[float], Optional[str]]] = {}
+        used_prices: Dict[Tuple[str, str, str], set] = {}
         snapshot_entries: List[Dict[str, Any]] = []
         for ctx in contexts:
             ad = ctx.ad
@@ -321,6 +322,16 @@ def _apply_pricing() -> List[Dict[str, Any]]:
                 statuses.append(_build_status_entry(ad, current_price, current_qty, eligible_groups, None, (bid, ask, symbol)))
                 continue
             price_for_update = round(target_price, precision) if update_price and target_price is not None else current_price
+            if update_price and price_for_update is not None:
+                pair_key = (token.upper(), fiat.upper(), side)
+                pair_used = used_prices.setdefault(pair_key, set())
+                offset = 0
+                candidate = price_for_update
+                while round(candidate, precision) in pair_used:
+                    offset += 1
+                    candidate = price_for_update + offset * step if side == "SELL" else price_for_update - offset * step
+                price_for_update = round(candidate, precision)
+                pair_used.add(price_for_update)
             token_up = token.upper()
             if side == "SELL":
                 available = balances.get(token_up, 0.0)
